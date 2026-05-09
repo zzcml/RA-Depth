@@ -1,6 +1,10 @@
-```
+```gitignore
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Compiled Python files in networks directory
+networks/__pycache__/
 ```

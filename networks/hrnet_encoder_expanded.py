@@ -631,21 +631,120 @@ def _hrnet_expanded(arch, pretrained, progress, **kwargs):
     return model
 
 
-def hrnet18_expanded(pretrained=False, progress=True, **kwargs):
-    """HRNet-18 expanded model with all submodules explicitly defined."""
-    return _hrnet_expanded('hrnet18', pretrained, progress, **kwargs)
+# ========== ONNX EXPORT AND SIMPLIFICATION =========
+
+def export_to_onnx(model_func, model_name, input_shape=(1, 3, 256, 512), output_dir="./onnx_models"):
+    """
+    Export HRNet expanded model to ONNX format and simplify it.
+    
+    Args:
+        model_func: Model creation function (e.g., hrnet18_expanded)
+        model_name: Name for the output files (e.g., "hrnet18_expanded")
+        input_shape: Input tensor shape (default: (1, 3, 256, 512))
+        output_dir: Directory to save ONNX files
+    """
+    import os
+    import torch
+    import onnx
+    from onnxsim import simplify
+    
+    # Create output directory if not exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Create model
+    print(f"Creating {model_name} model...")
+    model = model_func(pretrained=False)
+    model.eval()
+    
+    # Create dummy input
+    dummy_input = torch.randn(input_shape)
+    
+    # Define output paths
+    original_onnx_path = os.path.join(output_dir, f"{model_name}.onnx")
+    simplified_onnx_path = os.path.join(output_dir, f"{model_name}_simplified.onnx")
+    
+    # Export to ONNX
+    print(f"Exporting {model_name} to ONNX (original)...")
+    torch.onnx.export(
+        model,
+        dummy_input,
+        original_onnx_path,
+        export_params=True,
+        opset_version=11,
+        do_constant_folding=True,
+        input_names=['input'],
+        output_names=['output'],
+        dynamic_axes={
+            'input': {0: 'batch_size', 2: 'height', 3: 'width'},
+            'output': {0: 'batch_size'}
+        }
+    )
+    print(f"Original ONNX saved to: {original_onnx_path}")
+    
+    # Load and simplify ONNX model
+    print(f"Simplifying {model_name} ONNX model...")
+    onnx_model = onnx.load(original_onnx_path)
+    
+    # Simplify the model
+    model_simp, check = simplify(onnx_model)
+    
+    if check:
+        print("ONNX simplification check passed!")
+        # Save simplified model
+        onnx.save(model_simp, simplified_onnx_path)
+        print(f"Simplified ONNX saved to: {simplified_onnx_path}")
+        
+        # Print model statistics
+        original_size = os.path.getsize(original_onnx_path) / (1024 * 1024)
+        simplified_size = os.path.getsize(simplified_onnx_path) / (1024 * 1024)
+        print(f"\n=== ONNX Export Summary ===")
+        print(f"Model: {model_name}")
+        print(f"Input shape: {input_shape}")
+        print(f"Original ONNX size: {original_size:.2f} MB")
+        print(f"Simplified ONNX size: {simplified_size:.2f} MB")
+        print(f"Size reduction: {((original_size - simplified_size) / original_size * 100):.2f}%")
+        print(f"Output directory: {output_dir}")
+        print("===========================\n")
+    else:
+        print("WARNING: ONNX simplification check failed! Saving original model only.")
+        # Still save the simplified model even if check fails (might still be usable)
+        onnx.save(model_simp, simplified_onnx_path)
+        print(f"Simplified ONNX (unchecked) saved to: {simplified_onnx_path}")
+    
+    return original_onnx_path, simplified_onnx_path
 
 
-def hrnet32_expanded(pretrained=False, progress=True, **kwargs):
-    """HRNet-32 expanded model with all submodules explicitly defined."""
-    return _hrnet_expanded('hrnet32', pretrained, progress, **kwargs)
-
-
-def hrnet48_expanded(pretrained=False, progress=True, **kwargs):
-    """HRNet-48 expanded model with all submodules explicitly defined."""
-    return _hrnet_expanded('hrnet48', pretrained, progress, **kwargs)
-
-
-def hrnet64_expanded(pretrained=False, progress=True, **kwargs):
-    """HRNet-64 expanded model with all submodules explicitly defined."""
-    return _hrnet_expanded('hrnet64', pretrained, progress, **kwargs)
+if __name__ == "__main__":
+    # Example usage: Export HRNet-18 expanded model to ONNX
+    print("Starting ONNX export for HRNet-18 Expanded...")
+    
+    try:
+        # Export HRNet-18
+        orig_path, simp_path = export_to_onnx(
+            model_func=hrnet18_expanded,
+            model_name="hrnet18_expanded",
+            input_shape=(1, 3, 256, 512),
+            output_dir="./onnx_models"
+        )
+        
+        # Verify the exported model can be loaded
+        import onnxruntime as ort
+        print(f"\nVerifying simplified ONNX model with ONNX Runtime...")
+        session = ort.InferenceSession(simp_path)
+        input_name = session.get_inputs()[0].name
+        output_name = session.get_outputs()[0].name
+        
+        # Run inference test
+        test_input = torch.randn(1, 3, 256, 512).numpy()
+        outputs = session.run([output_name], {input_name: test_input})
+        print(f"ONNX Runtime inference successful!")
+        print(f"Output shape: {outputs[0].shape}")
+        
+    except ImportError as e:
+        print(f"Error: Required package not installed. Please install with:")
+        print(f"  pip install onnx onnxsim onnxruntime")
+        print(f"Details: {e}")
+    except Exception as e:
+        print(f"Error during ONNX export: {e}")
+        import traceback
+        traceback.print_exc()

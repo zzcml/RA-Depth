@@ -621,27 +621,27 @@ class DepthDecoder_MSF_Expanded(nn.Module):
         # ========== Stage 0: 1x1 convolutions for feature alignment ==========
         self.conv1x1_0_2_1_conv = nn.Conv2d(num_ch_enc[2], num_ch_enc[1], kernel_size=1, stride=1)
         self.conv1x1_0_2_1_elu = nn.ELU(inplace=True)
-        self.upsample_0_2_1 = nn.ConvTranspose2d(num_ch_enc[2], num_ch_enc[2], kernel_size=4, stride=2, padding=1)
+        self.upsample_0_2_1 = nn.ConvTranspose2d(num_ch_enc[2], num_ch_enc[2], kernel_size=4, stride=2, padding=1, output_padding=0)
         
         self.conv1x1_0_3_2_conv = nn.Conv2d(num_ch_enc[3], num_ch_enc[2], kernel_size=1, stride=1)
         self.conv1x1_0_3_2_elu = nn.ELU(inplace=True)
-        self.upsample_0_3_2 = nn.ConvTranspose2d(num_ch_enc[3], num_ch_enc[3], kernel_size=4, stride=2, padding=1)
+        self.upsample_0_3_2 = nn.ConvTranspose2d(num_ch_enc[3], num_ch_enc[3], kernel_size=4, stride=2, padding=1, output_padding=0)
         
         self.conv1x1_0_3_1_conv = nn.Conv2d(num_ch_enc[3], num_ch_enc[1], kernel_size=1, stride=1)
         self.conv1x1_0_3_1_elu = nn.ELU(inplace=True)
-        self.upsample_0_3_1 = nn.ConvTranspose2d(num_ch_enc[3], num_ch_enc[3], kernel_size=8, stride=4, padding=2)
+        self.upsample_0_3_1 = nn.ConvTranspose2d(num_ch_enc[3], num_ch_enc[3], kernel_size=8, stride=4, padding=2, output_padding=0)
         
         self.conv1x1_0_4_3_conv = nn.Conv2d(num_ch_enc[4], num_ch_enc[3], kernel_size=1, stride=1)
         self.conv1x1_0_4_3_elu = nn.ELU(inplace=True)
-        self.upsample_0_4_3 = nn.ConvTranspose2d(num_ch_enc[4], num_ch_enc[4], kernel_size=4, stride=2, padding=1)
+        self.upsample_0_4_3 = nn.ConvTranspose2d(num_ch_enc[4], num_ch_enc[4], kernel_size=4, stride=2, padding=1, output_padding=0)
         
         self.conv1x1_0_4_2_conv = nn.Conv2d(num_ch_enc[4], num_ch_enc[2], kernel_size=1, stride=1)
         self.conv1x1_0_4_2_elu = nn.ELU(inplace=True)
-        self.upsample_0_4_2 = nn.ConvTranspose2d(num_ch_enc[4], num_ch_enc[4], kernel_size=8, stride=4, padding=2)
+        self.upsample_0_4_2 = nn.ConvTranspose2d(num_ch_enc[4], num_ch_enc[4], kernel_size=8, stride=4, padding=2, output_padding=0)
         
         self.conv1x1_0_4_1_conv = nn.Conv2d(num_ch_enc[4], num_ch_enc[1], kernel_size=1, stride=1)
         self.conv1x1_0_4_1_elu = nn.ELU(inplace=True)
-        self.upsample_0_4_1 = nn.ConvTranspose2d(num_ch_enc[4], num_ch_enc[4], kernel_size=16, stride=8, padding=4)
+        self.upsample_0_4_1 = nn.ConvTranspose2d(num_ch_enc[4], num_ch_enc[4], kernel_size=16, stride=8, padding=4, output_padding=0)
 
         # ========== Stage 1: Parallel convolutions ==========
         self.parallel_conv_1_1_conv = nn.Conv2d(num_ch_enc[1], num_ch_enc[1], kernel_size=3, stride=1, padding=1)
@@ -731,27 +731,33 @@ class DepthDecoder_MSF_Expanded(nn.Module):
 
         # ========== Stage 0: Upsampling via deconvolution ==========
         out = self.upsample_0_2_1(d0_2)
-        out = self.conv1x1_0_2_1_conv(out)
+        d0_2_up = out
+        out = self.conv1x1_0_2_1_conv(d0_2_up)
         d0_2_1 = self.conv1x1_0_2_1_elu(out)
         
         out = self.upsample_0_3_2(d0_3)
-        out = self.conv1x1_0_3_2_conv(out)
+        d0_3_up_2 = out
+        out = self.conv1x1_0_3_2_conv(d0_3_up_2)
         d0_3_2 = self.conv1x1_0_3_2_elu(out)
         
         out = self.upsample_0_3_1(d0_3)
-        out = self.conv1x1_0_3_1_conv(out)
+        d0_3_up_1 = out
+        out = self.conv1x1_0_3_1_conv(d0_3_up_1)
         d0_3_1 = self.conv1x1_0_3_1_elu(out)
         
         out = self.upsample_0_4_3(d0_4)
-        out = self.conv1x1_0_4_3_conv(out)
+        d0_4_up_3 = out
+        out = self.conv1x1_0_4_3_conv(d0_4_up_3)
         d0_4_3 = self.conv1x1_0_4_3_elu(out)
         
         out = self.upsample_0_4_2(d0_4)
-        out = self.conv1x1_0_4_2_conv(out)
+        d0_4_up_2 = out
+        out = self.conv1x1_0_4_2_conv(d0_4_up_2)
         d0_4_2 = self.conv1x1_0_4_2_elu(out)
         
         out = self.upsample_0_4_1(d0_4)
-        out = self.conv1x1_0_4_1_conv(out)
+        d0_4_up_1 = out
+        out = self.conv1x1_0_4_1_conv(d0_4_up_1)
         d0_4_1 = self.conv1x1_0_4_1_elu(out)
 
         # ========== Stage 0: Multi-scale fusion ==========
@@ -771,15 +777,18 @@ class DepthDecoder_MSF_Expanded(nn.Module):
 
         # ========== Stage 1: Upsampling via deconvolution ==========
         out = self.upsample_1_2_1(d1_2)
-        out = self.conv1x1_1_2_1_conv(out)
+        d1_2_up = out
+        out = self.conv1x1_1_2_1_conv(d1_2_up)
         d1_2_1 = self.conv1x1_1_2_1_elu(out)
         
         out = self.upsample_1_3_2(d1_3)
-        out = self.conv1x1_1_3_2_conv(out)
+        d1_3_up_2 = out
+        out = self.conv1x1_1_3_2_conv(d1_3_up_2)
         d1_3_2 = self.conv1x1_1_3_2_elu(out)
         
         out = self.upsample_1_3_1(d1_3)
-        out = self.conv1x1_1_3_1_conv(out)
+        d1_3_up_1 = out
+        out = self.conv1x1_1_3_1_conv(d1_3_up_1)
         d1_3_1 = self.conv1x1_1_3_1_elu(out)
 
         # ========== Stage 1: Multi-scale fusion ==========
@@ -795,7 +804,8 @@ class DepthDecoder_MSF_Expanded(nn.Module):
 
         # ========== Stage 2: Upsampling via deconvolution ==========
         out = self.upsample_2_2_1(d2_2)
-        out = self.conv1x1_2_2_1_conv(out)
+        d2_2_up = out
+        out = self.conv1x1_2_2_1_conv(d2_2_up)
         d2_2_1 = self.conv1x1_2_2_1_elu(out)
 
         # ========== Stage 2: Multi-scale fusion ==========
@@ -810,7 +820,8 @@ class DepthDecoder_MSF_Expanded(nn.Module):
 
         # ========== Stage 3: Upsampling via deconvolution ==========
         out = self.upsample_3_1_0(d3_1)
-        out = self.conv1x1_3_1_0_conv(out)
+        d3_1_up = out
+        out = self.conv1x1_3_1_0_conv(d3_1_up)
         d3_1_0 = self.conv1x1_3_1_0_elu(out)
 
         # ========== Stage 3: Multi-scale fusion ==========
@@ -820,9 +831,9 @@ class DepthDecoder_MSF_Expanded(nn.Module):
         out = self.parallel_conv_4_0_conv(d3_0_msf)
         d4_0 = self.parallel_conv_4_0_elu(out)
         
-        d4_0 = self.upsample_4_0(d4_0)
+        d4_0_up = self.upsample_4_0(d4_0)
         
-        out = self.parallel_conv_5_0_conv(d4_0)
+        out = self.parallel_conv_5_0_conv(d4_0_up)
         d5 = self.parallel_conv_5_0_elu(out)
         
         out = self.dispconv_0_conv(d5)
